@@ -16,8 +16,13 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: 构建可安装 ISO
-        run: sudo bash ./iso/build.sh
+      - name: 在 Debian 12 容器内构建可安装 ISO
+        run: |
+          docker run --privileged --rm \
+            -v "${{ github.workspace }}:/work" \
+            -w /work \
+            debian:bookworm \
+            bash -c "apt-get update && apt-get install -y --no-install-recommends live-build debootstrap ca-certificates && bash iso/build.sh"
 
       - name: 上传构建产物（Artifact）
         uses: actions/upload-artifact@v4

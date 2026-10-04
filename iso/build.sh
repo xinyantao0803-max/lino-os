@@ -29,7 +29,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 echo "==> [1/5] 安装构建依赖 live-build"
 apt-get update -qq
-apt-get install -y -qq live-build debootstrap
+apt-get install -y -qq live-build debootstrap ca-certificates
 
 cd "$ISO_DIR"
 
@@ -57,7 +57,7 @@ lb config \
   --linux-flavours amd64 \
   --memtest none \
   --debian-installer none \
-  --bootappend-live "boot=live components username=lino user-fullname=\"Lino User\" hostname=lino-os quiet splash" \
+  --bootappend-live "boot=live components username=lino user-fullname=Lino hostname=lino-os quiet splash" \
   --iso-application "Lino OS" \
   --iso-publisher "Lino OS Project" \
   --iso-volume "Lino_OS_${VERSION}"
