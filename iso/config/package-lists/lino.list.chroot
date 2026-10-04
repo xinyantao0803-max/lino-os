@@ -6,6 +6,7 @@ systemd
 sudo
 dbus-x11
 policykit-1
+xfce-polkit
 xz-utils
 squashfs-tools
 
@@ -29,6 +30,15 @@ network-manager-gnome
 pulseaudio
 pavucontrol
 alsa-utils
+
+# ---------- 中文语言环境与输入法 ----------
+locales
+fonts-noto-cjk
+fcitx5
+fcitx5-chinese-addons
+fcitx5-frontend-gtk3
+fcitx5-frontend-qt5
+im-config
 
 # ---------- 安装器（Windows 式引导安装） ----------
 calamares

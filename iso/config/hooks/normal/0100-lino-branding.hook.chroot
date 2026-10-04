@@ -1,8 +1,8 @@
 #!/bin/sh
-# Lino 品牌化 + 安装器/Shell 桌面入口（仅影响图形环境，非关键路径：失败不阻断启动）
+# Lino 品牌化 + 安装器/Shell 桌面入口 + 中文语言环境（非关键路径：失败不阻断启动）
 set -e
 
-# 让 live 用户首次登录桌面就有两个入口：安装 Lino OS、启动 Lino Shell
+# ---------- 桌面入口：live 用户首次登录即有两个入口 ----------
 mkdir -p /etc/skel/Desktop
 
 cat > /etc/skel/Desktop/lino-install.desktop <<'EOF'
@@ -10,7 +10,7 @@ cat > /etc/skel/Desktop/lino-install.desktop <<'EOF'
 Name=安装 Lino OS
 Name[zh_CN]=安装 Lino OS
 Comment=Windows 式引导安装
-Exec=calamares
+Exec=pkexec calamares
 Icon=system-run
 Type=Application
 Terminal=false
@@ -30,3 +30,33 @@ Categories=System;
 EOF
 
 chmod +x /etc/skel/Desktop/*.desktop
+
+# ---------- 中文语言环境 ----------
+if [ -x /usr/sbin/locale-gen ]; then
+  echo 'zh_CN.UTF-8 UTF-8' >> /etc/locale.gen
+  /usr/sbin/locale-gen || true
+fi
+cat > /etc/default/locale <<'EOF'
+LANG=zh_CN.UTF-8
+LANGUAGE=zh_CN:zh
+EOF
+
+# 输入法：fcitx5（拼音）。im-config 缺失时静默跳过。
+if [ -x /usr/bin/im-config ]; then
+  im-config -n fcitx5 || true
+fi
+
+# ---------- 系统身份：Lino OS（保留 debian 兼容字段） ----------
+rm -f /etc/os-release
+cat > /etc/os-release <<'EOF'
+PRETTY_NAME="Lino OS 0.1.1"
+NAME="Lino OS"
+VERSION_ID="0.1.1"
+VERSION="0.1.1"
+VERSION_CODENAME=bookworm
+ID=lino
+ID_LIKE=debian
+HOME_URL="https://github.com/xinyantao0803-max/lino-os"
+SUPPORT_URL="https://github.com/xinyantao0803-max/lino-os"
+BUG_REPORT_URL="https://github.com/xinyantao0803-max/lino-os/issues"
+EOF

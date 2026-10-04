@@ -2,6 +2,24 @@
 
 本项目遵循语义化版本（SemVer）。当前第一版聚焦 **PC 系统**；Server 为第二方向，暂不进入本版本范围。
 
+## [0.1.1] — 修复安装器提权 + 中文本地化 + 系统身份 Lino 化
+
+> 依据真机（VMware）首测反馈，修复「安装器未以管理员权限运行」与满屏 Debian 身份的问题。
+
+### 变更
+
+- **修复安装器无法安装**：桌面「安装 Lino OS」入口由 `Exec=calamares` 改为 `Exec=pkexec calamares`，
+  并新增 `xfce-polkit`（图形授权代理），安装器得以提权运行。
+- **中文本地化**：新增 `locales` + `fonts-noto-cjk`（中文显示）+ `fcitx5` 拼音输入法，
+  默认语言设为 `zh_CN.UTF-8`。
+- **系统身份**：`/etc/os-release` 覆盖为 `PRETTY_NAME="Lino OS 0.1.1"`、`ID=lino`、`ID_LIKE=debian`，
+  系统信息不再显示为 Debian。
+
+### 已知边界
+
+- Calamares 安装器的界面品牌（标题/欢迎语/图标）仍沿用 `calamares-settings-debian`；
+  本期只解决「能否安装」与系统身份，完整 Lino 品牌换皮 + 原生 Lino Shell 为下一主线。
+
 ## [0.1.0] — 第一版（可安装 PC 操作系统）
 
 > 定位：交付一个**能刻盘/写 U 盘、像 Windows 一样安装到 PC** 的 Lino OS，
