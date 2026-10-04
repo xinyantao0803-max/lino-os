@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lino Shell — 用户显示层原型</title>
+<style>
+  :root{
+    --bg0:#07090f; --bg1:#0c1322; --bg2:#101a30;
+    --lime:#a3e635; --lime-2:#84cc16; --cyan:#22d3ee; --violet:#8b5cf6;
+    --glass:rgba(255,255,255,.055);
+    --glass-strong:rgba(20,26,40,.6);
+    --stroke:rgba(255,255,255,.10);
+    --txt:#e7edf7; --txt-dim:#93a0b4;
+    --shadow:0 24px 60px rgba(0,0,0,.5);
+    --radius:16px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{height:100%; overflow:hidden;}
+  body{
+    font-family:"SF Pro Display","Segoe UI",system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    color:var(--txt); background:var(--bg0); user-select:none; -webkit-user-select:none;
+  }
+
+  /* ---------- 开机 Splash ---------- */
+  #boot{
+    position:fixed; inset:0; z-index:9999; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:34px;
+    background:radial-gradient(1200px 700px at 50% 38%, #0e1728, var(--bg0) 70%);
+    transition:opacity .7s ease, visibility .7s;
+  }
+  #boot.off{opacity:0; visibility:hidden; pointer-events:none;}
+  .logo-mark{
+    width:96px; height:96px; border-radius:28px; position:relative;
+    background:conic-gradient(from 210deg, var(--lime), var(--cyan), var(--violet), var(--lime));
+    box-shadow:0 0 60px rgba(163,230,53,.36), 0 30px 70px rgba(0,0,0,.55);
+    animation:spin 6s linear infinite;
+  }
+  .logo-mark::after{ /* 镜头/环缺口 */
+    content:""; position:absolute; inset:14px; border-radius:18px; background:var(--bg0);
+    box-shadow:inset 0 0 22px rgba(0,0,0,.8);
+  }
+  .logo-mark i{position:absolute; inset:30px; border-radius:12px; background:linear-gradient(135deg,var(--lime),var(--cyan)); z-index:1;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .logo-word{font-size:38px; font-weight:700; letter-spacing:8px; background:linear-gradient(90deg,#fff,var(--lime)); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .boot-tag{color:var(--txt-dim); font-size:13px; letter-spacing:3px;}
+  .boot-bar{width:220px; height:4px; border-radius:4px; background:rgba(255,255,255,.12); overflow:hidden;}
+  .boot-bar b{display:block; height:100%; width:0; border-radius:4px; background:linear-gradient(90deg,var(--lime),var(--cyan)); animation:load 1.6s ease forwards;}
+  @keyframes load{to{width:100%;}}
+
+  /* ---------- 桌面 ---------- */
+  #desktop{position:fixed; inset:0; overflow:hidden;}
+  .wallpaper{
+    position:absolute; inset:0;
+    background:
+      radial-gradient(900px 600px at 18% 22%, rgba(139,92,246,.16), transparent 60%),
+      radial-gradient(1100px 700px at 85% 75%, rgba(34,211,238,.14), transparent 60%),
+      radial-gradient(800px 520px at 60% 10%, rgba(163,230,53,.10), transparent 60%),
+      linear-gradient(160deg, var(--bg1), var(--bg0) 55%, #05070d);
+  }
+  .aurora{position:absolute; inset:-20%; filter:blur(80px); opacity:.5; animation:drift 26s ease-in-out infinite alternate;}
+  .aurora.a{background:radial-gradient(420px 420px at 50% 50%, rgba(163,230,53,.35), transparent 70%);}
+  .aurora.b{background:radial-gradient(520px 520px at 50% 50%, rgba(34,211,238,.3), transparent 70%); animation-duration:32s; animation-delay:-8s;}
+  @keyframes drift{from{transform:translate(0,0) scale(1);} to{transform:translate(6%,4%) scale(1.15);}}
+
+  /* 顶栏 */
+  #topbar{
+    position:absolute; top:0; left:0; right:0; height:44px; z-index:900;
+    display:flex; align-items:center; justify-content:space-between; padding:0 16px;
+    background:linear-gradient(180deg, rgba(8,11,18,.7), rgba(8,11,18,.25)); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+    border-bottom:1px solid rgba(255,255,255,.05);
+  }
+  .tb-left{display:flex; align-items:center; gap:10px; font-weight:700; letter-spacing:2px;}
+  .tb-dot{width:16px; height:16px; border-radius:6px; background:linear-gradient(135deg,var(--lime),var(--cyan)); box-shadow:0 0 14px rgba(163,230,53,.5);}
+  .tb-center{color:var(--txt-dim); font-size:13px;}
+  .tb-right{display:flex; align-items:center; gap:16px; font-size:13px; color:var(--txt);}
+  .tb-clock{text-align:right; line-height:1.1;}
+  .tb-clock .t{font-variant-numeric:tabular-nums; font-weight:600;}
+  .tb-clock .d{font-size:11px; color:var(--txt-dim);}
+  .tray{display:flex; align-items:center; gap:14px; color:var(--txt-dim);}
+  .tray svg{display:block;}
+  .power{cursor:pointer; color:#f87171;}
+
+  /* 桌面图标 */
+  #desk-icons{position:absolute; top:60px; left:16px; display:grid; grid-template-columns:86px; gap:6px; z-index:10;}
+  .dicon{display:flex; flex-direction:column; align-items:center; gap:7px; padding:11px 6px; border-radius:14px; cursor:pointer; transition:background .18s;}
+  .dicon:hover{background:rgba(255,255,255,.07);}
+  .dicon .ico{width:52px; height:52px; display:grid; place-items:center; border-radius:15px; box-shadow:0 8px 22px rgba(0,0,0,.4); transition:transform .16s;}
+  .dicon:hover .ico{transform:translateY(-2px) scale(1.05);}
+  .dicon .nm{font-size:12px; color:#e8eef8; text-shadow:0 1px 3px rgba(0,0,0,.7); text-align:center;}
+
+  /* Dock */
+  #dock{
+    position:absolute; left:50%; bottom:16px; transform:translateX(-50%); z-index:950;
+    display:flex; align-items:flex-end; gap:8px; padding:10px 12px; border-radius:22px;
+    background:var(--glass-strong); backdrop-filter:blur(26px); -webkit-backdrop-filter:blur(26px);
+    border:1px solid var(--stroke); box-shadow:var(--shadow);
+  }
+  .ditem{width:50px; height:50px; display:grid; place-items:center; border-radius:15px; cursor:pointer; position:relative; transition:transform .12s ease;}
+  .ditem .ico{width:42px; height:42px; display:grid; place-items:center; border-radius:13px; transition:transform .12s ease; transform-origin:bottom center;}
+  .ditem::before{content:""; position:absolute; bottom:-5px; left:50%; transform:translateX(-50%) scale(0); width:6px; height:6px; border-radius:50%; background:var(--lime); transition:transform .2s;}
+  .ditem.run::before{transform:translateX(-50%) scale(1);}
+  .ditem:hover .ico{transform:translateY(-5px);}
+  .ditem .tip{
+    position:absolute; bottom:66px; left:50%; transform:translateX(-50%) translateY(4px); padding:5px 10px; font-size:12px;
+    background:rgba(10,13,20,.9); border:1px solid var(--stroke); border-radius:8px; white-space:nowrap; opacity:0; transition:.15s; pointer-events:none;
+  }
+  .ditem:hover .tip{opacity:1; transform:translateX(-50%) translateY(0);}
+  .dock-sep{width:1px; align-self:stretch; margin:8px 2px; background:var(--stroke);}
+
+  /* ---------- 窗口 ---------- */
+  #wins{position:absolute; inset:0; z-index:800;}
+  .window{
+    position:absolute; min-width:360px; min-height:240px; border-radius:var(--radius);
+    background:var(--glass-strong); backdrop-filter:blur(30px); -webkit-backdrop-filter:blur(30px);
+    border:1px solid var(--stroke); box-shadow:var(--shadow); display:flex; flex-direction:column; overflow:hidden;
+    animation:win-in .26s cubic-bezier(.2,.9,.25,1);
+  }
+  @keyframes win-in{from{opacity:0; transform:scale(.92) translateY(14px);} to{opacity:1; transform:scale(1) translateY(0);}}
+  .window.focused{border-color:rgba(163,230,53,.28); box-shadow:0 28px 80px rgba(0,0,0,.62);}
+  .window.min{display:none;}
+  .window.max{left:8px!important; top:48px!important; width:calc(100% - 16px)!important; height:calc(100% - 62px)!important;}
+  .win-tb{height:40px; display:flex; align-items:center; gap:10px; padding:0 12px; cursor:default; border-bottom:1px solid var(--stroke); flex:0 0 auto;}
+  .win-dots{display:flex; gap:8px;}
+  .win-dots span{width:12px; height:12px; border-radius:50%; cursor:pointer; transition:filter .15s;}
+  .win-dots .c{background:#f87171;} .win-dots .mn{background:#fbbf24;} .win-dots .mx{background:#34d399;}
+  .win-dots span:hover{filter:brightness(1.25);}
+  .win-title{flex:1; text-align:center; font-size:13px; color:var(--txt-dim); font-weight:600;}
+  .win-body{flex:1; overflow:auto; padding:16px;}
+  .win-body::-webkit-scrollbar{width:8px;}
+  .win-body::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12); border-radius:8px;}
+
+  /* store */
+  .store-head{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;}
+  .store-head h2{font-size:18px;}
+  .search{display:flex; align-items:center; gap:8px; background:rgba(255,255,255,.06); border:1px solid var(--stroke); border-radius:10px; padding:7px 12px; min-width:200px; color:var(--txt-dim); font-size:13px;}
+  .chips{display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;}
+  .chip{padding:6px 13px; border-radius:20px; font-size:12px; border:1px solid var(--stroke); cursor:pointer; color:var(--txt-dim); transition:.16s;}
+  .chip:hover{color:#fff;}
+  .chip.on{background:linear-gradient(90deg,rgba(163,230,53,.18),rgba(34,211,238,.14)); color:var(--lime); border-color:rgba(163,230,53,.35);}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:12px;}
+  .card{background:rgba(255,255,255,.035); border:1px solid var(--stroke); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:10px; transition:.18s;}
+  .card:hover{background:rgba(255,255,255,.06); transform:translateY(-2px); border-color:rgba(255,255,255,.18);}
+  .card .ico{width:46px; height:46px; display:grid; place-items:center; border-radius:12px;}
+  .card h4{font-size:14px;}
+  .card .meta{font-size:11px; color:var(--txt-dim);}
+  .card .acts{margin-top:auto;}
+  .btn{width:100%; padding:8px 0; border:none; border-radius:9px; cursor:pointer; font-weight:600; font-size:13px; transition:.16s; color:#0a0d13;}
+  .btn.inst{background:linear-gradient(90deg,var(--lime),var(--lime-2));}
+  .btn.inst:hover{filter:brightness(1.08);}
+  .btn.open{background:rgba(255,255,255,.1); color:#fff; border:1px solid var(--stroke);}
+  .progwrap{width:100%; height:8px; border-radius:6px; background:rgba(255,255,255,.1); overflow:hidden;}
+  .progwrap b{display:block; height:100%; width:0; background:linear-gradient(90deg,var(--lime),var(--cyan)); transition:width .1s linear;}
+  .store-foot{margin-top:14px; padding:10px 12px; border-radius:10px; background:rgba(163,230,53,.07); border:1px solid rgba(163,230,53,.18); font-size:12px; color:var(--txt-dim); line-height:1.6;}
+  .store-foot b{color:var(--lime);}
+
+  /* vlc */
+  .vlc-scene{position:relative; border-radius:12px; overflow:hidden; aspect-ratio:16/9; background:radial-gradient(400px 220px at 30% 30%, #312e81, #1e1b4b 60%, #0b0a18); display:grid; place-items:center;}
+  .vlc-scene .playbadge{width:64px; height:64px; border-radius:50%; background:rgba(255,255,255,.12); backdrop-filter:blur(6px); display:grid; place-items:center; cursor:pointer; border:1px solid rgba(255,255,255,.2); transition:.2s;}
+  .vlc-scene .playbadge:hover{transform:scale(1.08); background:rgba(255,255,255,.2);}
+  .eq{position:absolute; bottom:0; left:0; right:0; height:56px; display:flex; align-items:flex-end; justify-content:center; gap:4px; padding:0 20px 10px;}
+  .eq i{flex:1; height:24%; border-radius:3px 3px 0 0; background:linear-gradient(180deg,var(--lime),var(--cyan)); opacity:.85; transform-origin:bottom;}
+  .eq.play i{animation:eq 1s ease-in-out infinite alternate;}
+  @keyframes eq{from{height:18%;} to{height:96%;}}
+  .vlc-ctl{display:flex; align-items:center; gap:14px; margin-top:14px;}
+  .vlc-ctl .btn{width:auto; padding:8px 16px;}
+  .vlc-ctl .pb{flex:1; height:6px; border-radius:4px; background:rgba(255,255,255,.12); position:relative; cursor:pointer;}
+  .vlc-ctl .pb b{position:absolute; inset:0; width:0; border-radius:4px; background:linear-gradient(90deg,var(--lime),var(--cyan));}
+  .vlc-ctl .pb::after{content:""; position:absolute; top:50%; left:0; transform:translate(-50%,-50%); width:12px; height:12px; border-radius:50%; background:#fff;}
+  .vlc-ctl .time{font-size:12px; color:var(--txt-dim); font-variant-numeric:tabular-nums; min-width:74px; text-align:right;}
+  .vlc-track{font-size:12px; color:var(--txt-dim); margin-top:4px;}
+
+  /* terminal */
+  .term{font-family:"Cascadia Code","Consolas",ui-monospace,monospace; font-size:13px; line-height:1.7; color:#c7f9a8; background:rgba(0,0,0,.45); border-radius:12px; padding:14px 16px; height:100%; overflow:auto;}
+  .term .ln{white-space:pre-wrap;}
+  .term .prompt{color:var(--lime);}
+  .term .cursor{display:inline-block; width:8px; height:15px; background:var(--lime); vertical-align:-2px; animation:blink 1s steps(1) infinite;}
+  @keyframes blink{50%{opacity:0;}}
+
+  /* generic panels */
+  .side{display:flex; height:100%; gap:16px;}
+  .side nav{width:150px; flex:0 0 auto; display:flex; flex-direction:column; gap:4px;}
+  .side nav a{padding:8px 12px; border-radius:9px; font-size:13px; color:var(--txt-dim); cursor:pointer;}
+  .side nav a.on{background:rgba(255,255,255,.07); color:#fff;}
+  .side .panel{flex:1;}
+  .kpis{display:flex; gap:12px; margin-bottom:14px;}
+  .kpi{flex:1; background:rgba(255,255,255,.04); border:1px solid var(--stroke); border-radius:12px; padding:14px;}
+  .kpi b{display:block; font-size:22px; margin-top:4px;}
+  .kpi small{color:var(--txt-dim); font-size:11px;}
+  .vm-banner{display:flex; flex-direction:column; gap:12px; align-items:center; justify-content:center; text-align:center; height:100%; color:var(--txt-dim); font-size:13px;}
+  .vm-banner .ico{width:64px; height:64px; display:grid; place-items:center; border-radius:18px;}
+  .note{font-size:11px; color:var(--txt-dim); line-height:1.6; text-align:center;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12px; color:var(--txt-dim); margin-bottom:6px;}
+  .toggle{display:flex; align-items:center; justify-content:space-between; padding:10px 12px; background:rgba(255,255,255,.04); border-radius:10px; border:1px solid var(--stroke); margin-bottom:8px; font-size:13px;}
+  .tog{width:42px; height:24px; border-radius:20px; background:rgba(255,255,255,.14); position:relative; cursor:pointer; transition:.2s;}
+  .tog::after{content:""; position:absolute; top:3px; left:3px; width:18px; height:18px; border-radius:50%; background:#fff; transition:.2s;}
+  .tog.on{background:linear-gradient(90deg,var(--lime),var(--lime-2));}
+  .tog.on::after{left:21px;}
+</style>
+</head>
+<body>
+
+  <!-- 开机 -->
+  <div id="boot">
+    <div class="logo-mark"><i></i></div>
+    <div class="logo-word">LINO</div>
+    <div class="boot-tag">用户显示层 · 原型</div>
+    <div class="boot-bar"><b></b></div>
+  </div>
+
+  <!-- 桌面 -->
+  <div id="desktop">
+    <div class="wallpaper"></div>
+    <div class="aurora a"></div><div class="aurora b"></div>
+
+    <div id="topbar">
+      <div class="tb-left"><span class="tb-dot"></span> LINO</div>
+      <div class="tb-center"></div>
+      <div class="tb-right">
+        <div class="tray">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z" stroke="currentColor" stroke-width="2"/><path d="M4.5 9h15M6.5 5.3c3 2 4.5 3.7 5.5 6.7M3.5 15c3-2.5 5-3.5 8-3.5M15 5.5c2.5 1.5 4 2.5 5.5 3.5" stroke="currentColor" stroke-width="1.6"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 9v6h4l5 4V5L8 9H4Z" fill="currentColor"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11" stroke="currentColor" stroke-width="1.8"/></svg>
+          <svg width="17" height="16" viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/><rect x="19" y="10" width="3" height="4" rx="1" fill="currentColor"/><rect x="5" y="9" width="9" height="6" rx="1" fill="var(--lime)"/></svg>
+        </div>
+        <div class="tb-clock"><div class="t" id="clock">--:--</div><div class="d" id="date"></div></div>
+        <span class="power" title="关机" onclick="boot()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 3v8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M18.4 6.6a8 8 0 1 1-12.8 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </span>
+      </div>
+    </div>
+
+    <div id="desk-icons"></div>
+    <div id="dock"></div>
+    <div id="wins"></div>
+  </div>
+
+<script>
+const APP = {
+  installer:{name:"App Installer", cat:"系统", colors:["#a3e635","#22d3ee"],
+    glyph:'<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3Z" stroke="#0a0d13" stroke-width="1.4" fill="rgba(255,255,255,.9)"/><path d="M12 7.5v5M9.5 14.5l2.5 2.5 2.5-2.5" stroke="#0a0d13" stroke-width="1.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'},
+  vlc:{name:"Lino VLC", cat:"影音", colors:["#fb923c","#f97316"],
+    glyph:'<path d="M6 4l14 8-14 8V4Z" fill="#fff"/>'},
+  android:{name:"Android 虚拟机", cat:"系统", colors:["#34d399","#0d9488"],
+    glyph:'<path d="M6 15c0 1.7 2.7 3 6 3s6-1.3 6-3V8c0-1.7-2.7-3-6-3S6 6.3 6 8v7Z" fill="#fff"/><path d="M9 5.5l-1.5-2M15 5.5l1.5-2" stroke="#fff" stroke-width="1.4" stroke-linecap="round"/><path d="M10 11h4M11 13h2" stroke="#0d9488" stroke-width="1.4" stroke-linecap="round"/>'},
+  wvm:{name:"Windows 虚拟机", cat:"系统", colors:["#38bdf8","#2563eb"],
+    glyph:'<path d="M4 7h7V4H2v14h9v-3H4V7ZM13 4v3h7V4h-7ZM13 9h9v6h-9V9ZM13 17h9v3H2v-3h11Z" fill="#fff"/>'},
+  files:{name:"文件", cat:"系统", colors:["#fbbf24","#d97706"],
+    glyph:'<path d="M3 6h7l2 2h9v11H3V6Z" fill="#fff"/>'},
+  terminal:{name:"终端", cat:"开发", colors:["#1f2937","#111827"],
+    glyph:'<path d="M6 8l4 4-4 4M12 15h6" stroke="#a3e635" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'},
+  settings:{name:"设置", cat:"系统", colors:["#94a3b8","#475569"],
+    glyph:'<circle cx="12" cy="12" r="3" fill="#fff"/><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>'},
+  dev:{name:"开发者工具", cat:"开发", colors:["#8b5cf6","#6d28d9"],
+    glyph:'<path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13 6l-2 12" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'},
+  sec:{name:"安全中心", cat:"系统", colors:["#22d3ee","#8b5cf6"],
+    glyph:'<path d="M12 3l7 3v5c0 4.6-3 8.1-7 10-4-1.9-7-5.4-7-10V6l7-3Z" fill="#fff"/><path d="M8.8 11.7l2.1 2.1 4.3-4.3" stroke="#0d9488" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'},
+};
+const STORE_EXTRA = [
+  {id:'firefox',name:'Firefox',cat:'网络',colors:["#fb923c","#f43f5e"],glyph:'<path d="M12 3a9 9 0 1 0 9 9c0-1.5-.4-2.8-1-4A5 5 0 0 1 17 11a3 3 0 0 1-6 0c0-.8.3-1.5.8-2A3.2 3.2 0 0 0 9 6.2C6.7 8.4 5 11.5 5.5 15A6.5 6.5 0 0 0 12 19c3.6 0 6.5-2.9 6.5-6.5 0-2-1-3.7-2.4-4.8A3.8 3.8 0 0 1 17 9a2.3 2.3 0 0 1-4.6 0c0-.6.2-1.1.6-1.5-.3-.3-.6-.5-1-.5Z" fill="#fff"/>'},
+  {id:'gimp',name:'GIMP',cat:'设计',colors:["#78716c","#44403c"],glyph:'<circle cx="12" cy="12" r="8" fill="#fff"/><circle cx="9.5" cy="10" r="1.6" fill="#44403c"/><circle cx="14.5" cy="10" r="1.6" fill="#44403c"/><path d="M9 14c1.6 1.3 4.4 1.3 6 0" stroke="#44403c" stroke-width="1.4" fill="none" stroke-linecap="round"/>'},
+];
+function ico(svg){ return '<svg width="54%" height="54%" viewBox="0 0 24 24" fill="none">'+svg+'</svg>'; }
+function iconTile(a){ const [x,y]=a.colors; return '<div class="ico" style="background:linear-gradient(135deg,'+x+','+y+')">'+ico(a.glyph)+'</div>'; }
+
+let zTop=10, cascade=0;
+const winsBox=document.getElementById('wins');
+const dock=document.getElementById('dock');
+const deskIcons=document.getElementById('desk-icons');
+
+/* ---- 桌面图标 & Dock ---- */
+const deskOrder=['installer','vlc','files','android','terminal','sec','settings'];
+let dockHTML='';
+deskOrder.forEach(id=>{
+  const a=APP[id];
+  deskIcons.insertAdjacentHTML('beforeend',
+    '<div class="dicon" onclick="openApp(\''+id+'\')">'+iconTile(a)+'<span class="nm">'+a.name+'</span></div>');
+  dockHTML+='<div class="ditem" data-app="'+id+'" onclick="openApp(\''+id+'\')">'+iconTile(a)+'<span class="tip">'+a.name+'</span></div>';
+});
+dock.innerHTML=dockHTML+'<div class="dock-sep"></div>'+
+  '<div class="ditem" data-app="dev" onclick="openApp(\'dev\')">'+iconTile(APP.dev)+'<span class="tip">开发者工具</span></div>';
+
+/* Dock 放大 */
+dock.addEventListener('mousemove',e=>{
+  dock.querySelectorAll('.ditem').forEach(it=>{
+    const r=it.getBoundingClientRect(); const c=r.left+r.width/2;
+    const d=Math.abs(e.clientX-c); const dist=Math.max(0,1-d/120);
+    const s=1+dist*0.45; const lift=dist*8;
+    it.style.transform='translateY('+(-lift)+'px)';
+    const ic=it.querySelector('.ico'); if(ic) ic.style.transform='scale('+s+')';
+  });
+});
+dock.addEventListener('mouseleave',()=>{
+  dock.querySelectorAll('.ditem').forEach(it=>{ it.style.transform=''; const ic=it.querySelector('.ico'); if(ic) ic.style.transform=''; });
+});
+
+/* ---- 窗口管理 ---- */
+function openApp(id){
+  let w=winsBox.querySelector('.window[data-app="'+id+'"]');
+  if(w){ w.classList.remove('min'); focus(w); if(w.classList.contains('max')) return; return; }
+  w=document.createElement('div');
+  w.className='window'; w.dataset.app=id;
+  const a=APP[id];
+  const size=winSize(id);
+  w.style.width=size[0]+'px'; w.style.height=size[1]+'px';
+  const off=48+cascade*28; cascade=(cascade+1)%6;
+  w.style.left=(60+off)+'px'; w.style.top=(52+off)+'px';
+  w.innerHTML='<div class="win-tb"><div class="win-dots">'+
+    '<span class="c" title="关闭"></span><span class="mn" title="最小化"></span><span class="mx" title="最大化"></span></div>'+
+    '<div class="win-title">'+a.name+'</div></div><div class="win-body">'+bodyHTML(id)+'</div>';
+  winsBox.appendChild(w);
+  markRun(id);
+  wireWindow(w,id);
+  if(id==='vlc') initVLC(w);
+  if(id==='installer') initStore(w);
+  if(id==='sec') initSec(w);
+  focus(w);
+}
+function winSize(id){ return id==='installer'?[720,520]:id==='vlc'?[640,460]:id==='sec'?[660,500]:id==='files'?[620,440]:[520,390]; }
+function bodyHTML(id){
+  switch(id){
+    case 'installer': return storeHTML();
+    case 'vlc': return vlcHTML();
+    case 'files': return panelHTML('files');
+    case 'settings': return panelHTML('settings');
+    case 'terminal': return termHTML();
+    case 'dev': return devHTML();
+    case 'sec': return secHTML();
+    case 'android': return vmHTML('android');
+    case 'wvm': return vmHTML('wvm');
+    default: return '<p>Lino App</p>';
+  }
+}
+function wireWindow(w,id){
+  w.querySelector('.win-tb').addEventListener('pointerdown',e=>{
+    if(e.target.closest('.win-dots')) return;
+    if(w.classList.contains('max')) return;
+    const sx=e.clientX, sy=e.clientY, ox=w.offsetLeft, oy=w.offsetTop;
+    const mv=ev=>{ w.style.left=Math.max(0,Math.min(window.innerWidth-120, ox+ev.clientX-sx))+'px'; w.style.top=Math.max(44,Math.min(window.innerHeight-60, oy+ev.clientY-sy))+'px'; };
+    const up=()=>{ window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up); };
+    window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up);
+  });
+  w.addEventListener('pointerdown',()=>focus(w));
+  const d=w.querySelector('.win-dots');
+  d.querySelector('.c').onclick=()=>w.remove();
+  d.querySelector('.mn').onclick=()=>w.classList.add('min');
+  d.querySelector('.mx').onclick=()=>{ w.classList.toggle('max'); if(!w.classList.contains('max')){ w.style.width=winSize(id)[0]+'px'; w.style.height=winSize(id)[1]+'px'; } };
+  }
+function focus(w){ winsBox.querySelectorAll('.window').forEach(x=>x.classList.remove('focused')); w.classList.add('focused'); w.style.zIndex=++zTop; }
+function markRun(id){ const it=dock.querySelector('.ditem[data-app="'+id+'"]'); if(it) it.classList.add('run'); }
+
+/* ---- App Installer ---- */
+function storeHTML(){
+  const all=[];
+  ['vlc','files','android','wvm','dev'].forEach(k=>all.push(APP[k]));
+  STORE_EXTRA.forEach(e=>all.push(e));
+  const el=all.map(a=>{
+    const inst=(a.name==='Lino VLC');
+    return '<div class="card"><div style="display:flex;align-items:center;gap:10px">'+iconTile(a)+'<div><h4>'+a.name+'</h4><div class="meta">'+a.cat+' · 128 MB</div></div></div>'+
+      '<div class="meta">★ 4.7 · 开源</div><div class="acts">'+
+      (inst?'<button class="btn open" data-open="vlc">打开</button>':'<button class="btn inst" data-install>安装</button>')+
+      '</div></div>';
+  }).join('');
+  return '<div class="store-head"><h2>Lino App Installer</h2><div class="search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="M20 20l-3.5-3.5" stroke="currentColor" stroke-width="2"/></svg>搜索应用</div></div>'+
+    '<div class="chips"><span class="chip on">全部</span><span class="chip">影音</span><span class="chip">网络</span><span class="chip">设计</span><span class="chip">系统</span></div>'+
+    '<div class="grid">'+el+'</div>'+
+    '<div class="store-foot"><b>统一安装格式</b> · 跨发行版通用 · 沙箱隔离 · 双击即装，全程零终端。</div>';
+}
+function initStore(w){
+  w.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{ w.querySelectorAll('.chip').forEach(x=>x.classList.remove('on')); c.classList.add('on'); });
+  w.querySelectorAll('[data-open="vlc"]').forEach(b=>b.onclick=()=>openApp('vlc'));
+  w.querySelectorAll('[data-install]').forEach(b=>{
+    b.onclick=function(){
+      const card=this.closest('.card');
+      this.replaceWith(progNode());
+      const bar=card.querySelector('.progwrap b'); const nm=card.querySelector('h4').textContent;
+      let p=0; const t=setInterval(()=>{ p+=Math.random()*18+8; if(p>=100){p=100; clearInterval(t);
+        setTimeout(()=>{ card.querySelector('.progwrap').replaceWith(btnNode('已安装 · 请重启','done')); },150); } bar.style.width=p+'%'; },120);
+    };
+  });
+}
+function progNode(){ const d=document.createElement('div'); d.innerHTML='<div class="progwrap"><b></b></div>'; return d.firstChild; }
+function btnNode(txt,cls){ const b=document.createElement('button'); b.className='btn open'; b.textContent=txt; return b; }
+
+/* ---- VLC ---- */
+function vlcHTML(){
+  return '<div class="vlc-scene"><div class="playbadge" id="vlcPlay">'+ico('<path d="M9 7.5v9l7-4.5-7-4.5Z" fill="#fff"/>')+'</div><div class="eq" id="eq">'+Array.from({length:24},()=>'<i style="animation-delay:'+(Math.random()*1).toFixed(2)+'s"></i>').join('')+'</div></div>'+
+    '<div class="vlc-ctl"><button class="btn inst" id="vlcToggle">暂停</button><div class="pb" id="vlcBar"><b></b></div><span class="time" id="vlcTime">00:00 / 03:45</span></div>'+
+    '<div class="vlc-track">◉ Lino 演示音轨 — 基于开源 VLC 内核 · 自有播放界面</div>';
+}
+function initVLC(w){
+  let playing=false, t=0, total=225, timer=null;
+  const badge=w.querySelector('#vlcPlay'), eq=w.querySelector('#eq'), toggle=w.querySelector('#vlcToggle'), bar=w.querySelector('#vlcBar b'), time=w.querySelector('#vlcTime');
+  function fmt(s){ const m=Math.floor(s/60), ss=Math.floor(s%60); return (m<10?'0':'')+m+':'+(ss<10?'0':'')+ss; }
+  function draw(){ bar.style.width=(t/total*100)+'%'; time.textContent=fmt(t)+' / '+fmt(total); }
+  function play(){ playing=true; eq.classList.add('play'); toggle.textContent='暂停'; badge.innerHTML=ico('<path d="M9 7h2v10H9V7ZM13 7h2v10h-2V7Z" fill="#fff"/>');
+    timer=setInterval(()=>{ t=(t+1)%(total+1); draw(); },1000); }
+  function pause(){ playing=false; eq.classList.remove('play'); toggle.textContent='播放'; badge.innerHTML=ico('<path d="M9 7.5v9l7-4.5-7-4.5Z" fill="#fff"/>'); clearInterval(timer); }
+  badge.onclick=()=>playing?pause():play(); toggle.onclick=()=>playing?pause():play();
+  const pbb=w.querySelector('#vlcBar');
+  pbb.onclick=e=>{ const r=pbb.getBoundingClientRect(); t=(e.clientX-r.left)/r.width*total; draw(); };
+  play();
+}
+
+/* ---- 面板：Files / Settings ---- */
+function panelHTML(which){
+  if(which==='files') return '<div class="side"><nav><a class="on">首页</a><a>文档</a><a>下载</a><a>图片</a><a>音乐</a><a>回收站</a></nav><div class="panel"><div class="kpis"><div class="kpi"><small>本地磁盘</small><b>256 GB</b><small>已用 42%</small></div><div class="kpi"><small>文件</small><b>1,204</b><small>最近 30 天</small></div></div><div class="vm-banner">'+iconTile(APP.files)+'<div>「文件」管理器演示面板</div><div class="note">正式版本将使用安全沙箱，用户文件与应用数据互相隔离。</div></div></div></div>';
+  return '<div class="side"><nav><a class="on">外观</a><a>网络</a><a>隐私</a><a>关于</a></nav><div class="panel"><div class="field"><label>主题</label><div class="toggle">深色模式<div class="tog on"></div></div><div class="toggle">毛玻璃特效<div class="tog on"></div></div><div class="toggle">启动动画<div class="tog on"></div></div></div><div class="field"><label>安全</label><div class="toggle">应用沙箱（强制）<div class="tog on"></div></div><div class="toggle">安全启动 (UEFI)<div class="tog on"></div></div></div></div></div>';
+}
+function termHTML(){
+  return '<div class="term"><div class="ln"><span class="prompt">lino@lino-os</span>:~$ echo "Lino OS"</div><div class="ln">Lino OS</div><div class="ln"><span class="prompt">lino@lino-os</span>:~$ lino install vlc</div><div class="ln">→ 已通过 App Installer 安装（双击即装，无需终端）</div><div class="ln"><span class="prompt">lino@lino-os</span>:~$ <span class="cursor"></span></div></div>';
+}
+function devHTML(){
+  return '<div class="vm-banner">'+iconTile(APP.dev)+'<div><b>开发者工具</b></div><div class="note">终端、SDK、容器与虚拟机统一入口。<br>Lino 对普通用户隐藏复杂性，但为开发者完整保留全部能力。</div></div>';
+}
+function vmHTML(type){
+  const isAndroid=type==='android'; const a=APP[type]; const base=isAndroid?'Waydroid':'QEMU/KVM';
+  return '<div class="vm-banner">'+iconTile(a)+'<div><b>'+(isAndroid?'Android 虚拟机':'Windows 虚拟机')+'</b></div>'+
+    '<div class="note">基于开源 <b style="color:#fff">'+base+'</b><br>'+ (isAndroid?'在 Lino 内直接运行 Android 应用。':'实验性：在 Lino 内运行 Windows 应用。') +'<br>合法 · 自由 · 开源</div></div>';
+}
+
+/* ---- 安全中心 ---- */
+function secHTML(){
+  return '<div class="store-head"><h2>安全中心</h2><div class="search" style="min-width:0;color:var(--lime)">实时防护已开启</div></div>'+
+    '<div class="kpis">'+
+      '<div class="kpi"><small>防护状态</small><b style="color:var(--lime)">保护中</b><small>双安全层 + 内核</small></div>'+
+      '<div class="kpi"><small>已扫描文件</small><b id="secN">0</b><small>安装前审查闸门</small></div>'+
+      '<div class="kpi"><small>检出威胁</small><b id="secH">0</b><small>哈希签名匹配</small></div>'+
+      '<div class="kpi"><small>系统完整性</small><b style="color:var(--cyan)">完好</b><small>Secure Boot 信任链</small></div>'+
+    '</div>'+
+    '<div style="display:flex;gap:12px;align-items:center;margin-bottom:14px">'+
+      '<button class="btn inst" id="secScan" style="width:auto;padding:9px 20px">立即扫描</button>'+
+      '<div class="progwrap" style="flex:1"><b id="secBar"></b></div>'+
+    '</div>'+
+    '<div class="field"><label>防护开关</label>'+
+      '<div class="toggle">实时威胁防护<div class="tog on" data-sec></div></div>'+
+      '<div class="toggle">应用安装前审查（fail-closed）<div class="tog on" data-sec></div></div>'+
+      '<div class="toggle">系统应用隔离域<div class="tog on" data-sec></div></div>'+
+    '</div>'+
+    '<div class="store-foot"><b>ThreatScan</b> 已接入审查闸门 · 哈希签名匹配 + EICAR 自检 · 命中即拦截（fail-closed）。双安全层夹住内核，纵深防御。</div>';
+}
+function initSec(w){
+  const scan=w.querySelector('#secScan'), bar=w.querySelector('#secBar'), n=w.querySelector('#secN'), h=w.querySelector('#secH');
+  let busy=false;
+  scan.onclick=()=>{
+    if(busy) return; busy=true; scan.textContent='扫描中…'; let p=0;
+    const t=setInterval(()=>{
+      p+=Math.random()*20+9; if(p>100) p=100;
+      bar.style.width=p+'%'; n.textContent=Math.floor(p*23.7).toLocaleString();
+      if(p>=100){ clearInterval(t); busy=false; scan.textContent='立即扫描'; h.textContent='0';
+        setTimeout(()=>{ bar.style.width='0%'; n.textContent='0'; }, 700); }
+    },120);
+  };
+  w.querySelectorAll('[data-sec]').forEach(tg=>tg.onclick=()=>tg.classList.toggle('on'));
+}
+
+/* ---- 时钟 ---- */
+function tick(){
+  const n=new Date();
+  document.getElementById('clock').textContent=String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0');
+  document.getElementById('date').textContent=n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0')+' 周'+'日一二三四五六'[n.getDay()];
+}
+setInterval(tick,1000); tick();
+
+/* ---- 开机 ---- */
+function boot(){ const b=document.getElementById('boot'); b.classList.toggle('off'); }
+setTimeout(boot, 2000);
+</script>
+</body>
+</html>

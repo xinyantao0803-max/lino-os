@@ -1,0 +1,28 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ---- 构建产物 ----
+dist/
+*.iso
+*.iso.zsync
+*.img
+
+# live-build 运行期生成的临时目录
+iso/.build/
+iso/binary/
+iso/chroot/
+iso/cache/
+
+# build.sh 注入进 live 根文件系统的源组件副本（与 shell/apps/security 重复）
+iso/config/includes.chroot/usr/share/lino/
+
+# ---- 编辑器 / 系统 ----
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

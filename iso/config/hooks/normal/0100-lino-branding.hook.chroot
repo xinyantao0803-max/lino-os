@@ -1,0 +1,32 @@
+#!/bin/sh
+# Lino 品牌化 + 安装器/Shell 桌面入口（仅影响图形环境，非关键路径：失败不阻断启动）
+set -e
+
+# 让 live 用户首次登录桌面就有两个入口：安装 Lino OS、启动 Lino Shell
+mkdir -p /etc/skel/Desktop
+
+cat > /etc/skel/Desktop/lino-install.desktop <<'EOF'
+[Desktop Entry]
+Name=安装 Lino OS
+Name[zh_CN]=安装 Lino OS
+Comment=Windows 式引导安装
+Exec=calamares
+Icon=system-run
+Type=Application
+Terminal=false
+Categories=System;
+EOF
+
+cat > /etc/skel/Desktop/lino-shell.desktop <<'EOF'
+[Desktop Entry]
+Name=Lino Shell
+Name[zh_CN]=Lino Shell
+Comment=启动 Lino 桌面（全屏）
+Exec=firefox-esr --kiosk file:///usr/share/lino/shell/index.html
+Icon=web-browser
+Type=Application
+Terminal=false
+Categories=System;
+EOF
+
+chmod +x /etc/skel/Desktop/*.desktop

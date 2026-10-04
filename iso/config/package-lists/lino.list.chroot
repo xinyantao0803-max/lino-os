@@ -1,0 +1,53 @@
+# Lino OS 软件集 —— live 与安装后共用（.list.chroot）
+# 目标：装上即用、整机硬件适配、零终端理念。
+
+# ---------- 基础系统 ----------
+systemd
+sudo
+dbus-x11
+policykit-1
+xz-utils
+squashfs-tools
+
+# ---------- 引导（UEFI，供安装器写入磁盘） ----------
+grub-efi-amd64
+
+# ---------- 显示与会话（轻量桌面） ----------
+xserver-xorg
+lightdm
+xfce4
+xfce4-terminal
+thunar
+thunar-volman
+gvfs
+
+# ---------- 网络 ----------
+network-manager
+network-manager-gnome
+
+# ---------- 音频 ----------
+pulseaudio
+pavucontrol
+alsa-utils
+
+# ---------- 安装器（Windows 式引导安装） ----------
+calamares
+calamares-settings-debian
+
+# ---------- 整机硬件：固件 ----------
+firmware-linux-free
+firmware-misc-nonfree
+
+# ---------- 整机硬件：GPU（Intel / AMD / NVIDIA 开源） ----------
+mesa-utils
+mesa-vulkan-drivers
+xserver-xorg-video-intel
+xserver-xorg-video-amdgpu
+xserver-xorg-video-ati
+xserver-xorg-video-nouveau
+
+# ---------- 打印（免驱动，IPP Everywhere） ----------
+cups
+
+# ---------- Lino Shell 运行时（浏览器显示自制界面） ----------
+firefox-esr

@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "apps": [
+    {
+      "id": "org.lino.vlc",
+      "name": "Lino VLC",
+      "category": "影音",
+      "summary": "自有音视频播放器（基于开源 VLC 内核）",
+      "description": "Lino OS 自有的音视频播放器，基于开源 VLC 内核，统一 Lino 播放体验。",
+      "backend": "flatpak",
+      "remote": "flathub",
+      "ref": "org.videolan.VLC",
+      "permissions": ["网络访问", "读取媒体文件", "音频输出"],
+      "recommended": true
+    },
+    {
+      "id": "org.lino.firefox",
+      "name": "Firefox 浏览器",
+      "category": "网络",
+      "summary": "自由开源的网页浏览器",
+      "backend": "flatpak",
+      "remote": "flathub",
+      "ref": "org.mozilla.firefox",
+      "permissions": ["网络访问", "读取下载文件"],
+      "recommended": true
+    },
+    {
+      "id": "org.lino.gimp",
+      "name": "GIMP 图像编辑",
+      "category": "设计",
+      "summary": "自由开源的图像编辑器",
+      "backend": "flatpak",
+      "remote": "flathub",
+      "ref": "org.gimp.GIMP",
+      "permissions": ["读取/写入图片文件"],
+      "recommended": false
+    },
+    {
+      "id": "org.lino.android",
+      "name": "Android 虚拟机",
+      "category": "系统",
+      "summary": "在 Lino 内运行 Android 应用（基于 Waydroid）",
+      "backend": "waydroid",
+      "remote": "lino",
+      "ref": "org.lino.android",
+      "permissions": ["硬件虚拟化", "网络访问", "存储访问"],
+      "recommended": false
+    },
+    {
+      "id": "org.lino.windows",
+      "name": "Windows 虚拟机",
+      "category": "系统",
+      "summary": "实验性：在 Lino 内运行 Windows 应用（QEMU/KVM）",
+      "backend": "qemu",
+      "remote": "lino",
+      "ref": "org.lino.windows",
+      "permissions": ["硬件虚拟化", "大容量存储"],
+      "recommended": false
+    }
+  ]
+}
