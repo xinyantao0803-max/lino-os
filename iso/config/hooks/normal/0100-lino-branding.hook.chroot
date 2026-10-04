@@ -31,10 +31,36 @@ EOF
 
 chmod +x /etc/skel/Desktop/*.desktop
 
+# 同时注册到系统菜单（菜单项天然受信任，作为免弹框的兜底入口）
+mkdir -p /usr/share/applications
+cp -f /etc/skel/Desktop/lino-install.desktop /usr/share/applications/lino-install.desktop
+cp -f /etc/skel/Desktop/lino-shell.desktop   /usr/share/applications/lino-shell.desktop
+
+# 首次登录把桌面图标标为「受信任」，避免 Thunar 弹「不可信启动器」拦截
+mkdir -p /usr/local/bin
+cat > /usr/local/bin/lino-trust-desktop-icons.sh <<'EOF'
+#!/bin/sh
+sleep 2
+for f in "$HOME"/Desktop/*.desktop; do
+  gio set "$f" metadata::trusted true 2>/dev/null || true
+done
+EOF
+chmod +x /usr/local/bin/lino-trust-desktop-icons.sh
+
+mkdir -p /etc/skel/.config/autostart
+cat > /etc/skel/.config/autostart/lino-trust.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Lino Trust Icons
+Exec=/usr/local/bin/lino-trust-desktop-icons.sh
+X-GNOME-Autostart-enabled=true
+NoDisplay=true
+EOF
+
 # ---------- 安装器提权：live 会话免密 sudo（仅限 calamares，规避「未以管理员权限运行」） ----------
 mkdir -p /etc/sudoers.d
 cat > /etc/sudoers.d/zz-lino-live <<'EOF'
-%sudo ALL=(ALL) NOPASSWD: /usr/bin/calamares
+ALL ALL=(ALL) NOPASSWD: /usr/sbin/calamares, /usr/bin/calamares
 EOF
 chmod 0440 /etc/sudoers.d/zz-lino-live
 
@@ -56,10 +82,10 @@ fi
 # ---------- 系统身份：Lino OS（保留 debian 兼容字段） ----------
 rm -f /etc/os-release
 cat > /etc/os-release <<'EOF'
-PRETTY_NAME="Lino OS 0.1.2"
+PRETTY_NAME="Lino OS 0.1.3"
 NAME="Lino OS"
-VERSION_ID="0.1.2"
-VERSION="0.1.2"
+VERSION_ID="0.1.3"
+VERSION="0.1.3"
 VERSION_CODENAME=bookworm
 ID=lino
 ID_LIKE=debian

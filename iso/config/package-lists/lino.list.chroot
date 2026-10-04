@@ -8,6 +8,7 @@ dbus-x11
 policykit-1
 xz-utils
 squashfs-tools
+libglib2.0-bin
 
 # ---------- 引导（UEFI，供安装器写入磁盘） ----------
 grub-efi-amd64

@@ -12,7 +12,7 @@
 # =============================================================================
 set -euo pipefail
 
-VERSION="0.1.2"
+VERSION="0.1.3"
 CODENAME="bookworm"
 ARCH="amd64"
 
@@ -57,7 +57,7 @@ lb config \
   --linux-flavours amd64 \
   --memtest none \
   --debian-installer none \
-  --bootappend-live "boot=live components username=lino user-fullname=Lino hostname=lino-os quiet splash" \
+  --bootappend-live "boot=live components locales=zh_CN.UTF-8 username=lino user-fullname=Lino hostname=lino-os quiet splash" \
   --iso-application "Lino OS" \
   --iso-publisher "Lino OS Project" \
   --iso-volume "Lino_OS_${VERSION}"

@@ -2,6 +2,20 @@
 
 本项目遵循语义化版本（SemVer）。当前第一版聚焦 **PC 系统**；Server 为第二方向，暂不进入本版本范围。
 
+## [0.1.3] — 安装器提权兜底 + 锁死中文环境
+
+> VMware 实测：「安装 Lino OS」点开没反应——sudoers 规则限定 `%sudo` 组且只匹配 `/usr/bin/calamares`
+> 一条路径，live 用户不在 `sudo` 组或路径不一致都会让 `sudo` 静默要密码（无终端 → 直接失败）；
+> 同时语言没被 live-config 正确设为中文，界面落回斯洛伐克语。
+
+### 变更
+
+- **提权规则兜底**：`/etc/sudoers.d/zz-lino-live` 由 `%sudo ... /usr/bin/calamares` 改为
+  `ALL ALL=(ALL) NOPASSWD: /usr/sbin/calamares, /usr/bin/calamares`，不依赖分组、不依赖路径。
+- **锁死中文环境**：`--bootappend-live` 增加 `locales=zh_CN.UTF-8`，启动时由 live-config 正确应用中文。
+- **桌面图标可信化**：安装器同时注册到系统菜单（天然受信任），并新增首次登录自启动脚本用 `gio`
+  标记桌面图标为受信任，避免 Thunar 弹「不可信启动器」。
+
 ## [0.1.2] — 修复构建：移除不存在的 xfce-polkit + 安装器免密提权
 
 > 0.1.1 因软件集中的 `xfce-polkit` 在 Debian 12 中不存在而构建失败（`E: Unable to locate package xfce-polkit`）；
