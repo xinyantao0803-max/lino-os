@@ -2,6 +2,18 @@
 
 本项目遵循语义化版本（SemVer）。当前第一版聚焦 **PC 系统**；Server 为第二方向，暂不进入本版本范围。
 
+## [0.1.2] — 修复构建：移除不存在的 xfce-polkit + 安装器免密提权
+
+> 0.1.1 因软件集中的 `xfce-polkit` 在 Debian 12 中不存在而构建失败（`E: Unable to locate package xfce-polkit`）；
+> 该包仅存在于 sid/trixie（较新的包），bookworm 稳定版没有。
+
+### 变更
+
+- **修复构建失败**：从软件集移除 `xfce-polkit`；同时移除 Xfce 用不到的 `fcitx5-frontend-qt5`。
+- **安装器提权改走 sudo**：桌面「安装 Lino OS」入口由 `pkexec calamares` 改为 `sudo -E calamares`，
+  并新增 `/etc/sudoers.d/zz-lino-live`（`%sudo ALL=(ALL) NOPASSWD: /usr/bin/calamares`），
+  不依赖 polkit 图形代理即可免密提权，规避「安装器未以管理员权限运行」。
+
 ## [0.1.1] — 修复安装器提权 + 中文本地化 + 系统身份 Lino 化
 
 > 依据真机（VMware）首测反馈，修复「安装器未以管理员权限运行」与满屏 Debian 身份的问题。

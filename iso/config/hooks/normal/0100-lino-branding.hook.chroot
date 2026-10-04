@@ -10,7 +10,7 @@ cat > /etc/skel/Desktop/lino-install.desktop <<'EOF'
 Name=安装 Lino OS
 Name[zh_CN]=安装 Lino OS
 Comment=Windows 式引导安装
-Exec=pkexec calamares
+Exec=sudo -E calamares
 Icon=system-run
 Type=Application
 Terminal=false
@@ -31,6 +31,13 @@ EOF
 
 chmod +x /etc/skel/Desktop/*.desktop
 
+# ---------- 安装器提权：live 会话免密 sudo（仅限 calamares，规避「未以管理员权限运行」） ----------
+mkdir -p /etc/sudoers.d
+cat > /etc/sudoers.d/zz-lino-live <<'EOF'
+%sudo ALL=(ALL) NOPASSWD: /usr/bin/calamares
+EOF
+chmod 0440 /etc/sudoers.d/zz-lino-live
+
 # ---------- 中文语言环境 ----------
 if [ -x /usr/sbin/locale-gen ]; then
   echo 'zh_CN.UTF-8 UTF-8' >> /etc/locale.gen
@@ -49,10 +56,10 @@ fi
 # ---------- 系统身份：Lino OS（保留 debian 兼容字段） ----------
 rm -f /etc/os-release
 cat > /etc/os-release <<'EOF'
-PRETTY_NAME="Lino OS 0.1.1"
+PRETTY_NAME="Lino OS 0.1.2"
 NAME="Lino OS"
-VERSION_ID="0.1.1"
-VERSION="0.1.1"
+VERSION_ID="0.1.2"
+VERSION="0.1.2"
 VERSION_CODENAME=bookworm
 ID=lino
 ID_LIKE=debian
